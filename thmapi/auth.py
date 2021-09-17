@@ -24,14 +24,15 @@ class __THMAuth(object):
         elif 'session' in credentials:
             cookie = create_cookie('connect.sid', credentials['session'], domain='tryhackme.com')
             self.session.cookies.set_cookie(cookie)
+            self.authenticated = True
 
-        try:
-            test_request = http_get(self.session, '/message/get-unseen')
+        # try:
+            # test_request = http_get(self.session, '/message/get-unseen')
 
-            if test_request['success']:
-                self.authenticated = True
-                return
-            else:
-                raise Exception(f'Failed to authenticate')
-        except Exception as e:
-            raise e
+            # if test_request['success']:
+            #     self.authenticated = True
+            #     return
+            # else:
+            #     raise Exception(f'Failed to authenticate')
+        # except Exception as e:
+        #     raise e
