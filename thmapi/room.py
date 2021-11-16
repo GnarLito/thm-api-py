@@ -33,28 +33,6 @@ class __THMRoom(object):
 
         return http_get(self.session, '/api/new-rooms')
 
-    def room_graph_data(self, room_code, user_count=10) -> list:
-        """
-        Gets a list of top {user_count} users from a room for the graph
-
-        :param room_code: Room code
-        :type user_count: int
-        :param user_count: Amount of user the call should return
-        :return: List of users on the scoreboard
-        """
-
-        return http_get(self.session, f'/api/getgraphdata/{user_count}/{room_code}')
-
-    def room_issues(self, room_code) -> dict:
-        """
-        Gets issues from a specific room
-
-        :param room_code: Room code
-        :return: Room issues
-        """
-
-        return http_get(self.session, f'/api/get-issues/{room_code}', has_success=True)['data']
-
     def room_votes(self, room_code) -> int:
         """
         Gets votes for a specific room
@@ -63,7 +41,7 @@ class __THMRoom(object):
         :return: Room votes
         """
 
-        return http_get(self.session, f'/api/get-votes/{room_code}')
+        return http_get(self.session, f'/api/room/votes/{room_code}')
 
     def room_weekly_challenges(self) -> list:
         """
@@ -101,16 +79,6 @@ class __THMRoom(object):
         """
 
         return http_get(self.session, f'/api/tasks/{room_code}')['data']
-
-    def room_issues(self, room_code) -> list:
-        """
-        Gets the list of issues for a specific room
-
-        :param room_code: Room code
-        :return: List of issues
-        """
-
-        return http_get(self.session, f'/api/get-issues/{room_code}')['data']
 
     def room_progress(self, *room_codes) -> list:
         """

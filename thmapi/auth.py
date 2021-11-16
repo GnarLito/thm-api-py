@@ -26,7 +26,7 @@ class __THMAuth(object):
             self.session.cookies.set_cookie(cookie)
 
         try:
-            test_request = http_get(self.session, '/message/get-unseen')
+            test_request = http_get(self.session, '/message/unseen')
 
             if test_request['success']:
                 self.authenticated = True

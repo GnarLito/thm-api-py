@@ -3,17 +3,14 @@ from .instance import __THMInstance
 from .koth import __THMKoth
 from .leaderboard import __THMLeaderboard
 from .room import __THMRoom
-from .stats import __THMStats
-from .team import __THMTeam
+
 from .user import __THMUser
 import requests
 
 
 class THM(
     __THMAuth,
-    __THMStats,
     __THMLeaderboard,
-    __THMTeam,
     __THMUser,
     __THMKoth,
     __THMRoom,
