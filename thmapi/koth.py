@@ -30,3 +30,17 @@ class __THMKoth(object):
         """
 
         return http_get(self.session, '/games/koth/recent/games')
+
+    def koth_user_games(self) -> list:
+        """
+        Gets user games
+        """
+        
+        return http_get(self.session, '/games/koth/user/games')
+
+    def koth_tickets_won(self, username) -> list:
+        """
+        Gets user tickets
+        """
+
+        return http_get(self.session, f'/games/tickets/won?username={username}', has_success=True)

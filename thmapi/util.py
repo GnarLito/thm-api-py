@@ -2,7 +2,7 @@ import requests
 import re
 
 __root_url = 'https://tryhackme.com'
-__csrf_script_regex = re.compile("const csrfToken='(.{36})';")
+__csrf_script_regex = re.compile("const csrfToken[ ]{0,1}=[ ]{0,1}[\"|'](.{36})[\"|']")
 __csrf_input_regex = re.compile('<input type="hidden" name="_csrf" value="(.{36})">')
 
 

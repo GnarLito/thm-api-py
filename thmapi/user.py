@@ -10,7 +10,7 @@ class __THMUser(object):
         :return:
         """
 
-        return http_get(self.session, f'/api/user-exist/{username}')['success']
+        return http_get(self.session, f'/api/user/exist/{username}')['success']
 
     def user_created_rooms(self, username) -> list:
         """
@@ -30,7 +30,7 @@ class __THMUser(object):
         :return: List of rooms (with all data) completed by this user
         """
 
-        return http_get(self.session, f'/api/all-completed-rooms/{username}')
+        return http_get(self.session, f'/api/all-completed-rooms?username={username}')
 
     def user_badges(self, username) -> list:
         """
@@ -40,7 +40,7 @@ class __THMUser(object):
         :return: List of badges
         """
 
-        return http_get(self.session, f'/api/get-badges/{username}')
+        return http_get(self.session, f'/api/badges/get/{username}')
 
     def user_activity(self, username) -> list:
         """
@@ -50,7 +50,7 @@ class __THMUser(object):
         :return: List of events
         """
 
-        return http_get(self.session, f'/api/get-activity-events/{username}', has_success=True)['data']
+        return http_get(self.session, f'/api/activity-events?username={username}', has_success=True)['data']
 
     def user_discord(self, token) -> dict:
         """
@@ -60,17 +60,7 @@ class __THMUser(object):
         :return: User data
         """
 
-        return http_get(self.session, f'/tokens/discord/{token}', has_success=True)
-
-    def user_stats(self, username) -> dict:
-        """
-        Gets the user's basic data
-
-        :param username: Username to check
-        :return: User data (rank, points, avatar)
-        """
-
-        return http_get(self.session, f'/api/user/{username}')
+        return http_get(self.session, f'/discord/user/{token}', has_success=True)
 
     def user_rank(self, username) -> int:
         """
@@ -80,14 +70,5 @@ class __THMUser(object):
         :return: User's rank
         """
 
-        return http_get(self.session, f'/api/usersRank/{username}')
+        return http_get(self.session, f'/api/user/rank/{username}')
 
-    def user_badge_info(self, *badges) -> list:
-        """
-        Returns a list of badge objects
-
-        :param badges: Badge list
-        :return:
-        """
-
-        return http_post(self.session, '/api/get-specific-badges', data={'badges': badges})
