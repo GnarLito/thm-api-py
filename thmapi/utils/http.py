@@ -5,6 +5,7 @@ import aiohttp
 import asyncio
 
 import utils
+import errors
 
 # from .. import __version__
 __version__ = "1"
@@ -70,30 +71,29 @@ class HTTPClient:
                 if 300 > r.status >= 200:
 
                     # $ if return url is login then no auth
-                    if r.url.raw_parts[-1] == "login":
-                        raise
+                    if r.url.raw_name == "login":
+                        raise errors.Unautherized(r, data)
                     
                     data.insert(0, r_data)
                     return data
                 
                 # $ no auth
                 if r.status in {401, 403}:
-                    raise
+                    raise errors.Unautherized(r, data)
                 
                 # $ endpoint not found
                 if 404 == r.status:
-                    raise
+                    raise errors.NotFound(r, data)
                 
                 # $ server side issue's
                 if r.status in {500, 502}:
-                    raise
+                    raise errors.ServerError(r, data)
         
-        except Exception as e:
-            print(e)
+        except Exception as e:           
+            print(e.__repr__())
 
     async def get_test_req(self):
         return await self.request(Route(GET, "/glossary/all-terms"))
-    
     
     
     
