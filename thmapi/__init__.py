@@ -34,3 +34,7 @@ class THM(
         if (credentials is not None) and (type(credentials) == dict):
             if ('username' in credentials) and ('password' in credentials) or 'session' in credentials:
                 self.login(credentials)
+
+
+
+__version__ = "1.0"
