@@ -1,21 +1,23 @@
-import sys
-from urllib.parse import quote as _uriquote
-import json
-import aiohttp
 import asyncio
+import json
+import sys
+from asyncio.futures import Future
+from urllib.parse import quote as _uriquote
 
-import utils
+import requests
+
 import errors
+import utils
 
 # from .. import __version__
 __version__ = "1"
 GET = 'GET'
 POST = 'POST'
 
-async def json_or_text(response):
-    text = await response.text(encoding='utf-8')
+def json_or_text(response):
+    text = response.text
     try:
-        if response.headers['content-type'] == 'application/json':
+        if response.headers['content-type'].startswith('application/json'):
             return json.loads(text)
     except KeyError:
         # Thanks Cloudflare
@@ -25,7 +27,7 @@ async def json_or_text(response):
 
 class Route:
     BASE = "https://www.tryhackme.com"
-    def __init__(self, method, path, **parameters):
+    def __init__(self, method=GET, path='', **parameters):
         self.method = method
         self.path = path
         url = self.BASE + self.path
@@ -34,6 +36,8 @@ class Route:
             self.url = url.format(**{k: _uriquote(v) if isinstance(v, str) else v for k, v in parameters.items()})
         else:
             self.url = url
+        
+        self.bucket = f"{method} {path}"
 
 
 class HTTPClient:
@@ -43,13 +47,20 @@ class HTTPClient:
         self.connector = connector
         self.connect_sid = None
         
-        self.user_agent = f'Tryhackme: (https://github.com/GnarLito/thm-api-py {__version__}) Python/{sys.version_info[0]}.{sys.version_info[1]} aiohttp/{aiohttp.__version__}'
-        
+        self.user_agent = f'Tryhackme: (https://github.com/GnarLito/thm-api-py {__version__}) Python/{sys.version_info[0]}.{sys.version_info[1]} requests/{requests.__version__}'
+    
+    async def close(self):
+        if self.__session:
+            await self.__session.close()
+    
     def login(self, session=None):
         self.connect_sid = session
-        self.__session = aiohttp.ClientSession(connector=self.connector, cookies={'connect.sid': self.connect_sid})
+        self.__session = requests.Session()
+        cookie = requests.cookies.create_cookie('connect.sid', session, domain='tryhackme.com')
+        self.__session.cookies.set_cookie(cookie)
         
-    async def request(self, route, **kwargs):
+    
+    def request(self, route, **kwargs):
         endpoint = route.url
         method = route.method
         
@@ -62,61 +73,54 @@ class HTTPClient:
             kwargs['data'] = utils.to_json(kwargs.pop('json'))
 
         data = []
+        # TODO: retries
         try:
-            async with self.__session.request(method, endpoint, **kwargs) as r:
+            with self.__session.request(method, endpoint, **kwargs) as r:
                 
-                r_data = await json_or_text(r)
+                r_data = json_or_text(r)
                 
                 # * valid return
-                if 300 > r.status >= 200:
+                if 300 > r.status_code >= 200:
 
                     # $ if return url is login then no auth
-                    if r.url.raw_name == "login":
+                    if r.url.split('/')[-1] == "login":
                         raise errors.Unautherized(r, data)
                     
                     data.insert(0, r_data)
                     return data
                 
                 # $ no auth
-                if r.status in {401, 403}:
+                if r.status_code in {401, 403}:
                     raise errors.Unautherized(r, data)
                 
                 # $ endpoint not found
-                if 404 == r.status:
+                if 404 == r.status_code:
                     raise errors.NotFound(r, data)
                 
                 # $ server side issue's
-                if r.status in {500, 502}:
+                if r.status_code in {500, 502}:
                     raise errors.ServerError(r, data)
         
         except Exception as e:           
-            print(e.__repr__())
+            print("WebError", e)
 
-    async def get_test_req(self):
-        return await self.request(Route(GET, "/glossary/all-terms"))
+    def get_test_req(self):
+        return self.request(Route(GET, "/api/site-stats"))
     
-    
+class RouteList:
+    def request(self, route, **kwargs): raise errors.NotImplemented()
+    def get_server_time(self):  return self.request(Route(path="/api/server-time"))
+    def get_site_stats(self):   return self.request(Route(path="/api/site-stats"))
+    def get_server_time(self):  return self.request(Route(path="/api/leaderboards"))
     
 class test_http:
     def __init__(self):
         self.loop = asyncio.get_event_loop()
         self.http = HTTPClient(loop=self.loop)
-        self.http.login()
-        
-    def run_await(self, func):
-        loop = self.loop
-        future = asyncio.ensure_future(func(), loop=loop)
-        future.add_done_callback(lambda e: {loop.stop()})
-        try: loop.run_forever()
-        except: pass
-        if not future.cancelled():
-            try: return future.result()
-            except: pass
-
-    def test(self):
-        async def test():
-            return await self.http.get_test_req()
-        return self.run_await(test)
     
+    def test(self):
+        self.http.login()
+        return self.http.get_test_req()
+
 mytest = test_http()
 print(mytest.test())
