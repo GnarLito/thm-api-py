@@ -1,11 +1,87 @@
-from typing import Tuple
-import errors
+import sys
 from urllib.parse import quote as _uriquote
-from cog import Cog
-from convertors import (_county_types, _leaderboard_types, _vpn_types)
+
+import requests
+
+from . import errors, utils
+from . import __version__
+from .cog import request_cog
+from .checks import _county_types, _leaderboard_types, _vpn_types
 
 GET='get'
 POST='post'
+
+
+class HTTPClient:
+    def __init__(self):
+        self.authenticated = False
+        self.__session = None
+        self.connect_sid = None
+        
+        self.user_agent = f'Tryhackme: (https://github.com/GnarLito/thm-api-py {__version__}) Python/{sys.version_info[0]}.{sys.version_info[1]} requests/{requests.__version__}'
+    
+    def close(self):
+        if self.__session:
+            self.__session.close()
+    
+    def static_login(self, session=None):
+        self.connect_sid = session
+        self.__session = requests.Session()
+        cookie = requests.cookies.create_cookie('connect.sid', session, domain='tryhackme.com')
+        self.__session.cookies.set_cookie(cookie)
+        
+        if session is not None:
+            try: 
+                self.request(RouteList.get_unseen_notifications())
+                self.authenticated = True
+            except: pass
+        
+    
+    def request(self, route, **kwargs):
+        endpoint = route.url
+        method = route.method
+        # ? settings = kwargs.pop('settings', None) do i need this
+        
+        headers = {
+            'User-Agent': self.user_agent
+        }
+        
+        if 'json' in kwargs:
+            headers['Content-Type'] = 'application/json'
+            kwargs['data'] = utils.to_json(kwargs.pop('json'))
+
+        
+        # data = []
+        # TODO: retries
+        try:
+            with self.__session.request(method, endpoint, **kwargs) as r:
+                
+                data = utils.response_to_json_or_text(r)
+                
+                # * valid return
+                if 300 > r.status_code >= 200:
+
+                    # $ if return url is login then no auth
+                    if r.url.split('/')[-1] == "login":
+                        raise errors.Unauthorized(request=r, route=route, data=data)
+
+                    return data
+                
+                # $ no auth
+                if r.status_code in {401, 403}:
+                    raise errors.Unauthorized(request=r, route=route, data=data)
+                
+                # $ endpoint not found
+                if 404 == r.status_code:
+                    raise errors.NotFound(request=r, route=route, data=data)
+                
+                # $ server side issue's
+                if r.status_code in {500, 502}:
+                    raise errors.ServerError(request=r, route=route, data=data)
+        
+        except Exception as e:           
+            print(e)
+
 
 class Route:
     # TODO: add post payload capabilities
@@ -32,6 +108,7 @@ class Route:
         
         self.bucket = f"{method} {path}"
 
+
 class RouteList:
     
     # * normal site calls
@@ -57,7 +134,11 @@ class RouteList:
     def get_path(           **parameters): return Route(path="/paths/single/{path_code}",  **parameters)
     def get_public_paths(   **parameters): return Route(path="/paths/public",              **parameters)
     def get_path_summary(   **parameters): return Route(path="/paths/summary",             **parameters)
+    
+    # * modules
+    
     def get_modules_summary(**parameters): return Route(path="/modules/summary",           **parameters)
+    def get_module(         **parameters): return Route(path="/modules/data/{module_code}",**parameters)
     
     # * games
     
@@ -125,16 +206,14 @@ class RouteList:
     def get_room_scoreboard(     **parameters): return Route(path="/api/room/scoreboard?code={room_code}", **parameters)
     def get_room_votes(          **parameters): return Route(path="/api/room/votes?code={room_code}",      **parameters)
     def get_room_details(        **parameters): return Route(path="/api/room/details?codes={room_code}",   **parameters) # ? list posibility
-    def get_room_tasks(          **parameters): return Route(path="/api/room/tasks/{room_code}",           **parameters)
+    def get_room_tasks(          **parameters): return Route(path="/api/tasks/{room_code}",           **parameters)
     def post_room_answer(        **parameters): return Route(method=POST, path="/api/{room_code}/answer",  **parameters)
     def post_deploy_machine(     **parameters): return Route(method=POST, path="/material/deploy",         **parameters)
     def post_reset_room_progress(**parameters): return Route(method=POST, path="/api/reset-progress",      **parameters)
     def post_leave_room(         **parameters): return Route(method=POST, path="/api/room/leave",          **parameters)
 
 
-class RequestList(RouteList, Cog):
-    def request(self, route, **kwargs): raise errors.NotImplemented()
-    
+class HTTP(request_cog, HTTPClient):
     # * normal site calls
     
     def get_server_time(self):
@@ -153,9 +232,9 @@ class RequestList(RouteList, Cog):
     # * Leaderboards
     
     def get_leaderboards(self, country: _county_types=None, type:_leaderboard_types=None):
-        return self.request(RouteList.get_leaderboards(country=country, type=type))
+        return self.request(RouteList.get_leaderboards(country=country.to_lower_case(), type=type))
     def get_koth_leaderboards(self, country: _county_types=None, type:_leaderboard_types=None):
-        return self.request(RouteList.get_koth_leaderboards(country=country, type=type))
+        return self.request(RouteList.get_koth_leaderboards(country=country.to_lower_case(), type=type))
     
     # * account
     
@@ -170,8 +249,13 @@ class RequestList(RouteList, Cog):
         return self.request(RouteList.get_public_paths())
     def get_path_summary(self):
         return self.request(RouteList.get_path_summary())
+    
+    # * modules
+    
     def get_modules_summary(self):
         return self.request(RouteList.get_modules_summary())
+    def get_module(self, module_code):
+        return self.request(RouteList.get_module(module_code))
     
     # * games
     
@@ -268,14 +352,14 @@ class RequestList(RouteList, Cog):
         return self.request(RouteList.get_questions_answered())
     def get_joined_rooms(self):
         return self.request(RouteList.get_joined_rooms())
-    def get_room_percetages(self, room_codes):
+    def get_room_percentages(self, room_codes):
         return self.request(RouteList.get_room_percetages(), json={"rooms": room_codes})
     def get_room_scoreboard(self, room_code):
         return self.request(RouteList.get_room_scoreboard(room_code=room_code))
     def get_room_votes(self, room_code):
         return self.request(RouteList.get_room_votes(room_code=room_code))
-    def get_room_details(self, room_code):
-        return self.request(RouteList.get_room_details(room_code=room_code))
+    def get_room_details(self, room_code, loadWriteUps: bool=True, loadCreators: bool=True, loadUser: bool=True):
+        return self.request(RouteList.get_room_details(room_code=room_code, options={"loadWriteUps": loadWriteUps, "loadCreators": loadCreators, "loadUser": loadUser}))
     def get_room_tasks(self, room_code):
         return self.request(RouteList.get_room_tasks(room_code=room_code))
     def post_room_answer(self, room_code, taskNo: int, questionNo: int, answer: str):
@@ -286,4 +370,3 @@ class RequestList(RouteList, Cog):
         return self.request(RouteList.post_reset_room_progress(), json={"code": room_code, "_csrf": ""})
     def post_leave_room(self, room_code): # ? csrf token
         return self.request(RouteList.post_leave_room(), json={"code": room_code, "_csrf": ""})
-    

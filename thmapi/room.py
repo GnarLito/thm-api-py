@@ -1,115 +1,70 @@
-from typing import List
+from .errors import NotImplemented
+from .user import User
+from .task import RoomTask
 
-from .util import *
+# ? writeups class
 
-
-class __THMRoom(object):
-    def room_details(self, room_code: str) -> dict:
-        """
-        Gets details of a specific room
-
-        :param room_code: Room code
-        :return: Room data
-        """
-
-        return http_get(self.session, f'/api/room-details?codes={room_code}')[room_code]
-
-    def room_details_multiple(self, room_codes: List[str]) -> dict:
-        """
-        Gets details of a specific room
-
-        :param room_codes: List of room codes
-        :return: Map of room data (mapped as {code: data})
-        """
-
-        return http_get(self.session, f'/api/room-details?codes={",".join(room_codes)}')
-
-    def room_new_rooms(self) -> list:
-        """
-        Gets a list of 6 newest rooms
-
-        :return: List of newest rooms
-        """
-
-        return http_get(self.session, '/api/new-rooms')
-
-    def room_votes(self, room_code) -> int:
-        """
-        Gets votes for a specific room
-
-        :param room_code: Room code
-        :return: Room votes
-        """
-
-        return http_get(self.session, f'/api/room/votes/{room_code}')
-
-    def room_weekly_challenges(self) -> list:
-        """
-        Gets a list of weekly challenge rooms
-
-        :return: List of weekly challenge rooms
-        """
-
-        return http_get(self.session, '/api/weekly-challenge-rooms')
-
-    # LIKELY TO CHANGE
-    # def room_hacktivities(self, query='null', order_by='most-popular', difficulty='all', type='all'):
-    #     """
-    #
-    #
-    #     :param query: Query string for looking at description/tags
-    #     :param order_by: Order by: most-users, most-popular, newest
-    #     :param difficulty: Difficulty: easy, medium, hard
-    #     :param type: Room type: challenge, walkthrough
-    #     :return: Room list
-    #     """
-    #
-    #     # order_by: most-users, most-popular, newest
-    #     # difficulty: easy, medium, hard
-    #     # type: challenge, walkthrough
-    #
-    #     return http_get(self.session, f'{root_url}/api/hacktivities/{query}/all/{order_by}/{difficulty}/{type}')
-
-    def room_tasks(self, room_code) -> list:
-        """
-        Gets the list of tasks+questions for a specific room
-
-        :param room_code: Room code
-        :return: List of tasks with their questions (and additional info when authenticated)
-        """
-
-        return http_get(self.session, f'/api/tasks/{room_code}')['data']
-
-    def room_progress(self, *room_codes) -> list:
-        """
-        Gets the list of issues for a specific room
-
-        :type room_codes: list
-        :param room_codes: List of room codes
-        :return: List of issues
-        """
-
-        return http_post(self.session, f'/api/room-percentages', data={'rooms': room_codes})
-
-    def room_answer_question(self, room_code, task_no, question_no, answer):
-        """
-        Answers a question in a room
-
-        :param room_code: Room code
-        :param task_no: Task number
-        :param question_no: Question number
-        :param answer: Answer
-        :return:
-        """
-        if not self.authenticated:
-            raise Exception("Not authenticated")
-
-        csrf_token = fetch_pattern(self.session, f'/room/{room_code}', 'csrf-script')
-
-        return http_post(
-            self.session,
-            f'/api/{room_code}/answer',
-            data={'taskNo': task_no, 'questionNo': question_no, 'answer': answer},
-            headers={'csrf-token': csrf_token},
-            has_success=True
-        )
+class Room:
+    def __init__(self, http, room_code, data):
+        self.http = http
+        self.tasks = []
+        self.writeups = []
+        self.creators = []
+        
+        data = data.get(room_code, None)
+        if data is None or not data.get('success', False):
+            raise NotImplemented("failed to create room, no success value returned")
+        
+        self._from_data(data)
+        
+    def _from_data(self, data):
+        self.name = data.get("roomCode")
+        self.id = data.get("roomId")
+        self.title = data.get("title")
+        self.description = data.get("description")
+        self.created = data.get("created")
+        self.published = data.get("published")
+        self.users = data.get("users")
+        self.type = data.get("type")
+        self.public = data.get("public")
+        self.difficulty = data.get("difficulty")
+        self.freeToUse = data.get("freeToUse")
+        self.ctf = data.get("ctf")
+        self.tags = data.get("tags")
+        self.ipType = data.get("ipType")
+        self.simpleRoom = data.get("simpleRoom")
+        self.writeups = data.get("writeups")
+        self.locked = data.get("locked")
+        self.comingSoon = data.get("comingSoon")
+        self.views = data.get("views")
+        self.certificate = data.get("certificate")
+        self.timeToComplete = data.get("timeToComplete")
+        self.userCompleted = data.get("userCompleted")
+        self._creators = data.get("creators")
+    
+    @property
+    def question_count(self):
+        count = 0
+        for task in self.tasks:
+            count += task.questions.__len__()
+        return count
+    @property
+    def precentage(self):
+        try: return self.http.get_room_percentages(room_codes=self.name)
+        except: return {"roomCode": self.name, "correct": 0, "total":self.question_count, "prec": 0}
+    @property
+    def votes(self):
+        return self.http.get_room_votes(room_code=self.name)
+    @property
+    def scoreboard(self):
+        return self.http.get_room_scoreboard(room_code=self.name)
+    @property
+    def tasks(self):
+        # TODO: is user is premium room tasks should be available or when not tasks are still available when session is not used
+        if self.freeToUse:
+            return [RoomTask(http=self.http, data=task) for task in self.http.get_room_tasks(room_code=self.name)]
+        else: []
+    @property
+    def creators(self):
+        return [User(http=self.http, username=user.get('username')) for user in self._creators]
+    

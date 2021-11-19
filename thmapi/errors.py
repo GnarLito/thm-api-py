@@ -9,12 +9,13 @@ class NotValidUrlParameters(Exception):
         return self.e
 
 class WebError(Exception):
-    def __init__(self, r, data):
-        self.request = r
+    def __init__(self, request, route, data):
+        self.request = request
+        self.route = route
         self.data = data
     
     def __str__(self):
-        return f"{type(self).__name__}(code={self.request.status_code}, return_URL={self.request.url.__str__()}, data_length: {self.data.__len__()})"
+        return f"{type(self).__name__}(code={self.request.status_code}, return_URL={self.route.url}, data_length: {self.data.__len__()})"
 
 class Unauthorized(WebError):
     pass
@@ -26,10 +27,10 @@ class NotFound(WebError):
     pass
 
 
-# * Convertors
+# * Checks
 
-class BaseConvertorException(NotImplemented):
+class BaseCheckError(NotImplemented):
     pass
 
-class TypeNotInTypeList(BaseConvertorException):
+class TypeNotInTypeList(BaseCheckError):
     pass

@@ -1,40 +1,18 @@
-from .auth import __THMAuth
-from .instance import __THMInstance
-from .koth import __THMKoth
-from .leaderboard import __THMLeaderboard
-from .room import __THMRoom
 
-from .user import __THMUser
-import requests
+__version__ = "2.1.0"
 
+from .errors import *
+from .converters import *
+from .utils import *
+from .http import http
+from .client import Client
+from .user import User
 
-class THM(
-    __THMAuth,
-    __THMLeaderboard,
-    __THMUser,
-    __THMKoth,
-    __THMRoom,
-    __THMInstance
-):
-    """
-    TryHackMe API Wrapper
-    """
+from .room import Room
+from .task import PathTask, RoomTask
+from .question import Question
 
-    def __init__(self, credentials=None):
-        """
-        Initializes the API Wrapper
-
-        :type credentials: dict
-        :param credentials: (Optional) Credentials for use with authenticated requests
-        """
-
-        self.session = requests.Session()
-        self.authenticated = False
-
-        if (credentials is not None) and (type(credentials) == dict):
-            if ('username' in credentials) and ('password' in credentials) or 'session' in credentials:
-                self.login(credentials)
-
-
-
-__version__ = "1.0"
+from .path import Path
+from .module import Module
+from .network import Network
+from .vpn import VPN

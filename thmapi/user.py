@@ -1,74 +1,36 @@
-from .util import *
+from .errors import NotImplemented
 
+# TODO: add message/notification class 
+class User:
+    def __init__(self, http, username=None):
+        self.http = http
+        
+        self.username = username
+        self._completed_rooms = []
+        
+        if not self.http.get_user_exist(username=self.username).get('success', False):
+            raise NotImplemented("Unknown user with username: "+ self.username)
+        
+        data = self._fetch()
+        self._from_data(data)
+    # TODO: fetch is a mess, needs fixing
+    def _fetch(self):
+        data = {}
+        data['badges'] = self.http.get_user_badges(username=self.username)
+        data['rank'] = self.http.get_discord_user(username=self.username)
+        data['completed_rooms'] = self.http.get_user_completed_rooms(username=self.username)
+        return data
+    
+    def _from_data(self, data):
+        self.badges = data.get('badges')
+        self.rank = data.get('rank').get('userRank')
+        self.points = data.get('rank').get('points')
+        self.subscribed = data.get('rank').get('subscribed')
+        self._completed_rooms = data.get('completed_rooms')
 
-class __THMUser(object):
-    def user_exists(self, username) -> bool:
-        """
-        Checks if a username is taken
-
-        :param username: Username to check
-        :return:
-        """
-
-        return http_get(self.session, f'/api/user/exist/{username}')['success']
-
-    def user_created_rooms(self, username) -> list:
-        """
-        Gets a list of rooms created by a user
-
-        :param username: Username to check
-        :return: List of rooms created by this user
-        """
-
-        return http_get(self.session, f'/api/created-rooms/{username}', has_success=True)['rooms']
-
-    def user_all_completed_rooms(self, username) -> list:
-        """
-        Gets all rooms completed by a user
-
-        :param username: Username to check
-        :return: List of rooms (with all data) completed by this user
-        """
-
-        return http_get(self.session, f'/api/all-completed-rooms?username={username}')
-
-    def user_badges(self, username) -> list:
-        """
-        Gets the list of badges a user has
-
-        :param username: Username to check
-        :return: List of badges
-        """
-
-        return http_get(self.session, f'/api/badges/get/{username}')
-
-    def user_activity(self, username) -> list:
-        """
-        Gets the user's activity feed
-
-        :param username: Username to check
-        :return: List of events
-        """
-
-        return http_get(self.session, f'/api/activity-events?username={username}', has_success=True)['data']
-
-    def user_discord(self, token) -> dict:
-        """
-        Gets the user's data from his discord integration token
-
-        :param token: Discord integration token
-        :return: User data
-        """
-
-        return http_get(self.session, f'/discord/user/{token}', has_success=True)
-
-    def user_rank(self, username) -> int:
-        """
-        Gets the user's rank
-
-        :param username: Username to check
-        :return: User's rank
-        """
-
-        return http_get(self.session, f'/api/user/rank/{username}')
+    @property
+    def completed_rooms(self):
+        # * u gotta love circular imports
+        from .room import Room
+        return [Room(data=data) for data in self._completed_rooms]
 
