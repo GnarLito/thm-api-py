@@ -5,14 +5,11 @@ import requests
 
 import errors
 import utils
-from routes import *
+from routes import RequestList
 # from .. import __version__
 
 
 __version__ = "1"
-
-GET = 'GET'
-POST = 'POST'
 
 def json_or_text(response):
     text = response.text
@@ -25,7 +22,7 @@ def json_or_text(response):
 
     return text
 
-class HTTPClient(RouteList):
+class HTTPClient(RequestList):
     def __init__(self, connector=None):
         self.__session = None
         self.connector = connector
@@ -90,9 +87,6 @@ class HTTPClient(RouteList):
         except Exception as e:           
             print(e)
 
-    def get_test_req(self):
-        return self.request(Route(GET, "/api/site-stats"))
-    
 
 class test_http:
     def __init__(self, session=None):
@@ -101,4 +95,4 @@ class test_http:
         
 
 mytest = test_http()
-print(mytest.http.get_subscription_cost())
+print(mytest.http.get_leaderboards(country="NLLL"))

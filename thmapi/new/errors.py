@@ -24,3 +24,12 @@ class ServerError(WebError):
 
 class NotFound(WebError):
     pass
+
+
+# * Convertors
+
+class BaseConvertorException(NotImplemented):
+    pass
+
+class TypeNotInTypeList(BaseConvertorException):
+    pass
