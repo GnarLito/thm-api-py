@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tryhackme.py",
-    version="1.0.2",
+    version="1.0.0",
     author="gnarlito",
     author_email="gnarlito35@gmail.com",
     description="THM public API wrapper",
@@ -20,11 +20,11 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Topic :: Internet :: WWW/HTTP"
     ],
     python_requires='>=3.8',
     install_requires=[
-        "requests"
+        "requests==2.26.0"
     ],
 )

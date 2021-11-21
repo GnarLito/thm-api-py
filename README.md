@@ -1,5 +1,4 @@
-<p align="center"><img src="https://assets.tryhackme.com/img/THMlogo.png" width="350" title="TryHackMe Logo"></p>
-<p align="center">API Py</p>
+<p><img src="https://assets.tryhackme.com/img/THMlogo.png" width="350" title="TryHackMe Logo"></p>
 
 
  
@@ -8,22 +7,16 @@ This fork is unofficial and not associated with TryHackMe, but i would love to.
 
 ## Installation
 ```sh
-pip install thmapi
+pip3 install tryhackme.py
 ```
 
-## Usage
+## Example
 ```python
-from thmapi import THM
+import tryhackme
 
-creds = {
-    'username': '<USERNAME>', 'password': '<PASSWORD', 
-    # username and password are no longer supported please instead use
-    'session': '<connect.sid cookie>'
-}
+client = tryhackme.Client(session="<tryHackMe cookie: `connect.sid`>") # Logging in is optional
+client.get_stats() # {'publicRooms': 203, 'totalUsers': 88017, 'cloneableRooms': 967}
 
-thm = THM(credentials=creds) # Logging in is optional
-
-thm.get_stats() # {'publicRooms': 203, 'totalUsers': 88017, 'cloneableRooms': 967}
 ```
 ## API documentation
 For the API documentation please visit the [TryHackMe-API-Doc](https://github.com/GnarLito/TryHackMe-API-Doc)

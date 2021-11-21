@@ -1,12 +1,12 @@
+import re
 import sys
 from urllib.parse import quote as _uriquote
 
 import requests
-import re
-from . import errors, utils
-from . import __version__
-from .cog import request_cog
+
+from . import __version__, errors, utils
 from .checks import _county_types, _leaderboard_types, _vpn_types
+from .cog import request_cog
 
 GET='get'
 POST='post'
@@ -27,8 +27,6 @@ class HTTPClient:
         
         if session is not None:
             self.static_login(session)
-            self.retrieve_CSRF_token()
-            self.retrieve_username()
     
     def close(self):
         if self.__session:
@@ -41,6 +39,8 @@ class HTTPClient:
         try: 
             self.request(RouteList.get_unseen_notifications())
             self.authenticated = True
+            self.retrieve_CSRF_token()
+            self.retrieve_username()
         except: pass
     
     def retrieve_CSRF_token(self):
