@@ -1,8 +1,8 @@
 
 # TODO: de HTML all the things
 class Question:
-    def __init__(self, http, data):
-        self.http = http
+    def __init__(self, state, data):
+        self._state = state
         self._from_data(data)
         
     def _from_data(self, data):

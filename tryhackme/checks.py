@@ -1,17 +1,17 @@
 
-from .errors import TypeNotInTypeList
+from .errors import *
 
 
 class _type_convertor:
     _TYPES = ()
     _DEFAULT = None
-    def convert(self, arg):
+    def convert(self, cls, arg):
         if arg is None: return self._DEFAULT
         if arg in self._TYPES: return arg
         else: raise TypeNotInTypeList(f"'{str(arg)}' is an invalid {self.name} type.")
     
     @property
-    def _get_name(self):
+    def name(self):
         return type(self).__name__.split('_')[1]
 
 class _vpn_types(_type_convertor):
@@ -24,3 +24,11 @@ class _county_types(_type_convertor):
 class _leaderboard_types(_type_convertor):
     _TYPES = ("monthly", "")
     
+    
+
+class authenticated_check:
+    def convert(self, cls, arg):
+        if cls.authenticated:
+            return arg
+        else:
+            raise Session_required()

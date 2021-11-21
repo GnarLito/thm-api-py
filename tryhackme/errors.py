@@ -34,3 +34,6 @@ class BaseCheckError(NotImplemented):
 
 class TypeNotInTypeList(BaseCheckError):
     pass
+
+class Session_required(BaseCheckError):
+    pass

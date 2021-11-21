@@ -1,11 +1,10 @@
 from .question import Question
-from .module import Module
 
 # TODO: html elements removing
 class RoomTask:
-    def __init__(self, http, data):
-        self.http = http
-        self.questions = []
+    def __init__(self, state, data):
+        self._state = state
+        self._questions = []
         
         self._from_data(data)
     
@@ -17,19 +16,19 @@ class RoomTask:
         self.created = data.get('taskCreated')
         self.deadline = data.get('taskDeadline')
         self.uploadId = data.get('uploadId')
-        self._sync(data)
-    
-    def _sync(self, data):
-        self._questions = data.get('tasksInfo', []) if self.http.authenticated else data.get('questions', [])
+        self._questions = data.get('tasksInfo', []) if self._state.authenticated else data.get('questions', [])
 
     @property
+    def question_count(self):
+        return self._questions.__len__()
+    @property
     def questions(self):
-        return [Question(http=self.http, data=question) for question in self._questions]
+        return [Question(state=self._state, data=question) for question in self._questions]
 
 
 class PathTask:
-    def __init__(self, http, data):
-        self.http = http
+    def __init__(self, state, data):
+        self.state = state
         self._rooms = []
         self._from_data(data)
     
@@ -45,8 +44,7 @@ class PathTask:
     
     @property
     def rooms(self):
-        from .room import Room
-        return [Room(http=self.http, data=self.http.get_room_details(room_code=room.get("code"))) for room in self._rooms]
+        return [self._state.get_room(room_code=room.get("code")) for room in self._rooms]
     @property
     def module(self):
-        return Module(http=self.http, moduleURL=self._moduleURL)
+        return self._state.get_module(moduleURL=self._moduleURL)

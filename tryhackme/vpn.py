@@ -1,8 +1,8 @@
 
 
 class VPN:
-    def __init__(self, http):
-        self.http = http
+    def __init__(self, state):
+        self._state = state
         self.available = False
         self.connected = False
         

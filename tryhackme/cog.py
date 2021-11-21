@@ -26,7 +26,7 @@ class annotater(Base_decorator):
             if func_args[index] in annotions:
                 try:
                     result = self.function.__annotations__[func_args[index]]
-                    out_args = (*out_args, result().convert(arg))
+                    out_args = (*out_args, result().convert(self.cls, arg))
                 except Exception as e:
                     raise e
             else: out_args = (*out_args, arg)
@@ -45,7 +45,7 @@ class annotater(Base_decorator):
 
 class Decorator_cog:
     __decorator__ = Base_decorator
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         if type(self.__decorator__) == Base_decorator:
             raise NotImplemented("Failed to decorate class, unknown decorator class found")
         
@@ -55,7 +55,7 @@ class Decorator_cog:
         for func_name in class_func_list:
             class_func = type(self).__dict__[func_name]
             setattr(self, func_name, self.__decorator__(self, class_func))
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
 
 class request_cog(Decorator_cog):

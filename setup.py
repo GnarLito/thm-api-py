@@ -4,15 +4,18 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="thmapi",
-    version="0.11.2",
-    author="Szymon Borecki",
-    author_email="self@szymex.pw",
+    name="tryhackme.py",
+    version="1.0.2",
+    author="gnarlito",
+    author_email="gnarlito35@gmail.com",
     description="THM public API wrapper",
+    include_package_data=True,
+    packages=[
+        "tryhackme"
+    ],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/thm-community/thm-api-py",
-    packages=setuptools.find_packages(),
+    url="https://github.com/gnarlito/tryhackme.py",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -22,10 +25,6 @@ setuptools.setup(
     ],
     python_requires='>=3.8',
     install_requires=[
-        "requests",
-        "chardet>=3.0.2,<4",
-        "idna>=2.5,<3",
-        "urllib3>=1.27",
-        "certifi>=2017.4.17"
+        "requests"
     ],
 )

@@ -2,7 +2,7 @@ import sys
 from urllib.parse import quote as _uriquote
 
 import requests
-
+import re
 from . import errors, utils
 from . import __version__
 from .cog import request_cog
@@ -13,34 +13,57 @@ POST='post'
 
 
 class HTTPClient:
-    def __init__(self):
+    __CSRF_token_regex = re.compile("const csrfToken[ ]{0,1}=[ ]{0,1}[\"|'](.{36})[\"|']")
+    __Username_regex = re.compile("const username[ ]{0,1}=[ ]{0,1}[\"|'](.{16})[\"|']")
+    def __init__(self, session=None):
         self.authenticated = False
-        self.__session = None
+        self.__session = requests.Session()
+        self.satic_session = requests.Session()
         self.connect_sid = None
+        self._CSRF_token = None
+        self._username = None
         
         self.user_agent = f'Tryhackme: (https://github.com/GnarLito/thm-api-py {__version__}) Python/{sys.version_info[0]}.{sys.version_info[1]} requests/{requests.__version__}'
+        
+        if session is not None:
+            self.static_login(session)
+            self.retrieve_CSRF_token()
+            self.retrieve_username()
     
     def close(self):
         if self.__session:
             self.__session.close()
     
-    def static_login(self, session=None):
+    def static_login(self, session):
         self.connect_sid = session
-        self.__session = requests.Session()
         cookie = requests.cookies.create_cookie('connect.sid', session, domain='tryhackme.com')
         self.__session.cookies.set_cookie(cookie)
-        
-        if session is not None:
-            try: 
-                self.request(RouteList.get_unseen_notifications())
-                self.authenticated = True
-            except: pass
-        
+        try: 
+            self.request(RouteList.get_unseen_notifications())
+            self.authenticated = True
+        except: pass
+    
+    def retrieve_CSRF_token(self):
+        if not self.authenticated:
+            return
+        page = self.request(RouteList.get_profile_page())
+        self._CSRF_token = self.__CSRF_token_regex.search(page).group(1)
+
+    def retrieve_username(self):
+        if not self.authenticated:
+            return
+        page = self.request(RouteList.get_profile_page())
+        self.username = self.__Username_regex.search(page).group(1)
     
     def request(self, route, **kwargs):
+        session = self.__session
         endpoint = route.url
         method = route.method
-        # ? settings = kwargs.pop('settings', None) do i need this
+        settings = kwargs.pop('settings', {})
+        
+        if settings.get("static", False):
+            session = self.satic_session
+        
         
         headers = {
             'User-Agent': self.user_agent
@@ -50,11 +73,9 @@ class HTTPClient:
             headers['Content-Type'] = 'application/json'
             kwargs['data'] = utils.to_json(kwargs.pop('json'))
 
-        
-        # data = []
-        # TODO: retries
+        # TODO: retries, Pagenator
         try:
-            with self.__session.request(method, endpoint, **kwargs) as r:
+            with session.request(method, endpoint, **kwargs) as r:
                 
                 data = utils.response_to_json_or_text(r)
                 
@@ -110,20 +131,26 @@ class Route:
 
 
 class RouteList:
+    def get_profile_page(**parameters): return Route(path="/profile", **parameters)
     
     # * normal site calls
     
-    def get_server_time(    **parameters): return Route(path="/api/server-time",    **parameters)
-    def get_site_stats(     **parameters): return Route(path="/api/site-stats",     **parameters)
-    def get_practise_rooms( **parameters): return Route(path="/api/practice-rooms", **parameters)
-    def get_networks(       **parameters): return Route(path="/api/networks",       **parameters)
-    def get_series(         **parameters): return Route(path="/api/series",         **parameters)
-    def get_glossary_terms( **parameters): return Route(path="/glossary/all-terms", **parameters)
+    def get_server_time(    **parameters): return Route(path="/api/server-time",        **parameters)
+    def get_site_stats(     **parameters): return Route(path="/api/site-stats",         **parameters)
+    def get_practise_rooms( **parameters): return Route(path="/api/practice-rooms",     **parameters)
+    def get_series(         **parameters): return Route(path="/api/series?show={show}", **parameters)
+    def get_glossary_terms( **parameters): return Route(path="/glossary/all-terms",     **parameters)
     
     # * Leaderboards
     
     def get_leaderboards(     **parameters): return Route(path="/api/leaderboards",      **parameters)
     def get_koth_leaderboards(**parameters): return Route(path="/api/leaderboards/koth", **parameters)
+    
+    # * networks
+    
+    def get_networks(     **parameters): return Route(path="/api/networks",                         **parameters)
+    def get_network(      **parameters): return Route(path="/api/room/network?code={network_code}", **parameters)
+    def get_network_cost( **parameters): return Route(path="/api/room/cost?code={network_code}",    **parameters)
     
     # * account
     
@@ -222,10 +249,10 @@ class HTTP(request_cog, HTTPClient):
         return self.request(RouteList.get_site_stats())
     def get_practise_rooms(self): 
         return self.request(RouteList.get_practise_rooms())
-    def get_networks(self): 
-        return self.request(RouteList.get_networks())
-    def get_series(self): 
-        return self.request(RouteList.get_series())
+    def get_serie(self, show, serie_code):
+        return self.request(RouteList.get_series(show=show, options={"name": serie_code}))
+    def get_series(self, show):
+        return self.request(RouteList.get_series(show=show))
     def get_glossary_terms(self): 
         return self.request(RouteList.get_glossary_terms())
     
@@ -235,6 +262,15 @@ class HTTP(request_cog, HTTPClient):
         return self.request(RouteList.get_leaderboards(country=country.to_lower_case(), type=type))
     def get_koth_leaderboards(self, country: _county_types=None, type:_leaderboard_types=None):
         return self.request(RouteList.get_koth_leaderboards(country=country.to_lower_case(), type=type))
+
+    # * networks
+    
+    def get_network(self, network_code): 
+        return self.request(RouteList.get_network(network_code=network_code))
+    def get_networks(self): 
+        return self.request(RouteList.get_networks())
+    def get_network_cost(self, network_code): 
+        return self.request(RouteList.get_networks(network_code=network_code))
     
     # * account
     
@@ -359,9 +395,9 @@ class HTTP(request_cog, HTTPClient):
     def get_room_votes(self, room_code):
         return self.request(RouteList.get_room_votes(room_code=room_code))
     def get_room_details(self, room_code, loadWriteUps: bool=True, loadCreators: bool=True, loadUser: bool=True):
-        return self.request(RouteList.get_room_details(room_code=room_code, options={"loadWriteUps": loadWriteUps, "loadCreators": loadCreators, "loadUser": loadUser}))
-    def get_room_tasks(self, room_code):
-        return self.request(RouteList.get_room_tasks(room_code=room_code))
+        return self.request(RouteList.get_room_details(room_code=room_code, options={"loadWriteUps": loadWriteUps, "loadCreators": loadCreators, "loadUser": loadUser})).get(room_code)
+    def get_room_tasks(self, room_code, **request_options):
+        return self.request(RouteList.get_room_tasks(room_code=room_code), **request_options)
     def post_room_answer(self, room_code, taskNo: int, questionNo: int, answer: str):
         return self.request(RouteList.post_room_answer(room_code=room_code), json={"_csrf": "", "taskNo": taskNo, "questionNo": questionNo, "answer": answer})
     def post_deploy_machine(self, room_code, uploadId): # ? csrf token

@@ -1,22 +1,16 @@
-from .user import User
 from .task import PathTask
-from .module import Module
+
 
 class Path:
-    def __init__(self, http, data):
-        self.http = http
+    def __init__(self, state, data):
+        self._state = state
         
         self._badges = []
         self._careers = []
         self._modules = []
         self._tasks = []
         
-        if data.get("username", None) is None:
-            data = self._fetch(data)
         self._from_data(data)
-    
-    def _fetch(self, data):
-        return self.http.get_path(path_code=data.get("code"))
     
     def _from_data(self, data):
         self.code = data.get("code")
@@ -27,7 +21,7 @@ class Path:
         self.public = data.get("public", False)
         self.room_count = data.get("roomNo")
         self.summary = data.get("summary")
-        self.careers = data.get("careers", [])
+        self._careers = data.get("careers", [])
         self.difficulty = data.get("easy")
         self.time_to_complete = data.get("timeToComplete")
         self._modules = data.get("modules", [])
@@ -37,18 +31,19 @@ class Path:
         self._sync(data)
 
     def _sync(self, data):
-        self.user = User(http=self.http, username=data.get('username'))
+        self.user = self._state.store_user(data.get('username'))
 
     @property
     def tasks(self):
-        return [PathTask(http=self.http, data=task) for task in self._tasks]
+        return [PathTask(state=self._state, data=task) for task in self._tasks]
     @property
     def modules(self):
-        return [Module(http=self.http, data=module.get('moduleURL')) for module in self._module]
+        return [self._state.store_module(module) for module in self._module]
     # TODO: badge class
     @property
     def badges(self):
-        return [badge for badge in self._badges]
+        return [self._state.store_badge(badge) for badge in self._badges]
+    # ? What is this
     @property
     def careers(self):
         return [career for career in self._careers]

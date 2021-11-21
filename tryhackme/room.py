@@ -1,18 +1,15 @@
 from .errors import NotImplemented
-from .user import User
 from .task import RoomTask
 
 # ? writeups class
 
 class Room:
-    def __init__(self, http, room_code, data):
-        self.http = http
-        self.tasks = []
-        self.writeups = []
-        self.creators = []
+    def __init__(self, state, data):
+        self._state = state
+
+        self._creators = []
         
-        data = data.get(room_code, None)
-        if data is None or not data.get('success', False):
+        if not data.get('success', False):
             raise NotImplemented("failed to create room, no success value returned")
         
         self._from_data(data)
@@ -46,25 +43,26 @@ class Room:
     def question_count(self):
         count = 0
         for task in self.tasks:
-            count += task.questions.__len__()
+            count += task.questions_count
         return count
     @property
     def precentage(self):
-        try: return self.http.get_room_percentages(room_codes=self.name)
+        try: return self._state.http.get_room_percentages(room_codes=self.name)
         except: return {"roomCode": self.name, "correct": 0, "total":self.question_count, "prec": 0}
     @property
     def votes(self):
-        return self.http.get_room_votes(room_code=self.name)
+        return self._state.http.get_room_votes(room_code=self.name)
     @property
     def scoreboard(self):
-        return self.http.get_room_scoreboard(room_code=self.name)
+        return self._state.http.get_room_scoreboard(room_code=self.name)
     @property
     def tasks(self):
-        # TODO: is user is premium room tasks should be available or when not tasks are still available when session is not used
-        if self.freeToUse:
-            return [RoomTask(http=self.http, data=task) for task in self.http.get_room_tasks(room_code=self.name)]
-        else: []
+        # TODO: add sessionless http client for no session task gathering
+        if self.freeToUse or self._state.subscribed:
+            return [RoomTask(state=self._state, data=task) for task in self._state.http.get_room_tasks(room_code=self.name)]
+        else:
+            return [RoomTask(state=self._state, data=task) for task in self._state.http.get_room_tasks(room_code=self.name, settings={"static": True})]
     @property
     def creators(self):
-        return [User(http=self.http, username=user.get('username')) for user in self._creators]
+        return [self._state.store_user(username=user.get('username')) for user in self._creators]
     
