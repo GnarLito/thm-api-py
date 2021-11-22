@@ -1,7 +1,9 @@
 <p align="center"><img src="https://assets.tryhackme.com/img/THMlogo.png" width="350" title="TryHackMe Logo"></p>
 <p align="center">API Py</p>
 
-
+# NOTE:
+**The maintained version off the TryHackMe python API is moved to [tryhackme.py](https://github.com/gnarlito/tryhackme.py)**
+And this fork is now dormant.
  
 Maintained Python wrapper for TryHackMe public API  
 This fork is unofficial and not associated with TryHackMe, but i would love to.
